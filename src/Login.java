@@ -11,13 +11,12 @@ public class Login extends JDialog {
     private JTextField loginField;
     private JTextField passwordField;
     private JButton buttonLogin;
-    private JButton registerButton;
     private JLabel loginLabel;
     private JLabel passwordLabel;
 
     public Login() {
         setContentPane(LoginPanel);
-        setTitle("Login");
+        setTitle("Вхід");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setSize(450, 300);
         setLocationRelativeTo(null);
@@ -30,11 +29,11 @@ public class Login extends JDialog {
                 String passwordUser = passwordField.getText();
                 User user = checkLogin(loginUser, passwordUser);
                 if (user != null) {
-                    JOptionPane.showMessageDialog(Login.this, "Login successful!");
-                    new ManageData();
+                    JOptionPane.showMessageDialog(Login.this, "Вхід успішний!");
+                    new ProjectDetails();
                     dispose();
                 } else {
-                    JOptionPane.showMessageDialog(Login.this, "Login failed!");
+                    JOptionPane.showMessageDialog(Login.this, "Помилка входу!");
                 }
             }
         });
