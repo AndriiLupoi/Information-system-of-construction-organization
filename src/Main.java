@@ -28,7 +28,7 @@ public class Main {
         return statement.executeQuery();
     }
     public static void main(String[] args) {
-        new Login();
-//        new ProjectDetails();
+//        new Login();
+        new ProjectDetails();
     }
 }

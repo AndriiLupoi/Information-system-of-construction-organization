@@ -6,9 +6,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
+
+import com.toedter.calendar.JDateChooser;
 
 public class ProjectDetails extends JDialog {
     private JPanel ProjectDetailsPanel;
@@ -29,6 +29,7 @@ public class ProjectDetails extends JDialog {
         queryType.addItem("Розклад");
         queryType.addItem("Кошторис");
         queryType.addItem("Огляд робіт бригад");
+        queryType.addItem("Будівельні керування та їх керівники");
 
         // Слухач для зміни типу проектів у залежності від вибраного типу запиту
         queryType.addActionListener(new ActionListener() {
@@ -58,6 +59,8 @@ public class ProjectDetails extends JDialog {
         updateProjectComboBox();
     }
 
+
+
     // Метод для оновлення projectComboBox на основі вибраного типу запиту
     private void updateProjectComboBox() {
         projectComboBox.removeAllItems(); // Очищаємо комбо бокс
@@ -68,8 +71,46 @@ public class ProjectDetails extends JDialog {
             loadProjectNamesForEstimate();
         } else if (selectedQueryType.equals("Огляд робіт бригад")){
             loadWorkTypes();
+        } else if (selectedQueryType.equals("Будівельні керування та їх керівники")) {
+            loadBuildingManagementsForComboBox();
         }
     }
+
+    private void loadBuildingManagementsForComboBox() {
+        System.out.println("Loading building managements for combo box."); // Налагодження
+        try (Connection connection = Main.getConnection()) {
+            if (connection == null) {
+                System.err.println("Failed to establish a database connection.");
+                return;
+            }
+
+            String query = "SELECT name FROM building_management";
+            try (PreparedStatement statement = connection.prepareStatement(query);
+                 ResultSet resultSet = statement.executeQuery()) {
+
+                if (!resultSet.isBeforeFirst()) { // Перевірка, чи є результати
+                    System.out.println("No data found for building managements.");
+                }
+
+                while (resultSet.next()) {
+                    String name = resultSet.getString("name");
+                    projectComboBox.addItem(name);
+                    System.out.println("Added to combo box: " + name); // Налагодження
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.err.println("SQL Error: " + e.getMessage()); // Налагодження
+        }
+    }
+
+    // Приклад використання методу для відображення результатів
+    private String displayBuildingManagements() {
+        String managements = loadBuildingManagements();
+        detailsArea.setText(managements);
+        return managements;
+    }
+
 
     // Завантажуємо імена проектів для розкладу
     private void loadProjectNamesForSchedule() {
@@ -110,33 +151,26 @@ public class ProjectDetails extends JDialog {
         }
     }
 
-    // Метод для відображення діалогового вікна для введення часу
     private void showDateInputDialog(String projectName, String queryType) {
-        JPanel panel = new JPanel(new GridLayout(3, 2, 5, 5));
+        JPanel panel = new JPanel(new GridLayout(2, 2, 5, 5));
 
-        // Додаємо текстові поля для вводу початкової і кінцевої дати
-        panel.add(new JLabel("Дата початку (формат dd-MM-yyyy):"));
-        JTextField startDateField = new JTextField(20);
-        panel.add(startDateField);
+        // Створюємо календарі для вибору початкової і кінцевої дати
+        JDateChooser startDateChooser = new JDateChooser();
+        JDateChooser endDateChooser = new JDateChooser();
 
-        panel.add(new JLabel("Дата завершення (формат dd-MM-yyyy):"));
-        JTextField endDateField = new JTextField(20);
-        panel.add(endDateField);
+        panel.add(new JLabel("Дата початку:"));
+        panel.add(startDateChooser);
+        panel.add(new JLabel("Дата завершення:"));
+        panel.add(endDateChooser);
 
-        int option = JOptionPane.showConfirmDialog(this, panel, "Введіть дати", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        int option = JOptionPane.showConfirmDialog(this, panel, "Виберіть дати", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (option == JOptionPane.OK_OPTION) {
-            String startDateText = startDateField.getText().trim();
-            String endDateText = endDateField.getText().trim();
-            try {
-                SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
-                Date startDate = sdf.parse(startDateText);
-                Date endDate = sdf.parse(endDateText);
-                loadBrigadeDetails(projectName, startDate, endDate);
-            } catch (ParseException e) {
-                JOptionPane.showMessageDialog(this, "Невірний формат дати. Будь ласка, використовуйте формат dd-MM-yyyy.", "Помилка", JOptionPane.ERROR_MESSAGE);
-            }
+            Date startDate = startDateChooser.getDate();
+            Date endDate = endDateChooser.getDate();
+            loadBrigadeDetails(projectName, startDate, endDate);
         }
     }
+
 
 
     // Завантажуємо деталі проекту в залежності від вибраного типу запиту
@@ -145,6 +179,8 @@ public class ProjectDetails extends JDialog {
             detailsArea.setText(loadSchedule(projectName));
         } else if (queryType.equals("Кошторис")) {
             detailsArea.setText(loadEstimate(projectName));
+        } else if (queryType.equals("Будівельні керування та їх керівники")){
+            detailsArea.setText(displayBuildingManagements());
         }
     }
 
@@ -181,8 +217,8 @@ public class ProjectDetails extends JDialog {
             statement.setString(1, projectName);
             ResultSet resultSet = statement.executeQuery();
             while (resultSet.next()) {
-                estimate.append(" Матеріал: ").append(resultSet.getString("material")).append("\n")
-                        .append(" Кількість: ").append(resultSet.getInt("quantity")).append("\n")
+                estimate.append(" Матеріал: ").append(resultSet.getString("material")).append(",")
+                        .append(" Кількість: ").append(resultSet.getInt("quantity")).append(",")
                         .append(" Вартість: ").append(resultSet.getBigDecimal("cost")).append("\n");
             }
         } catch (SQLException e) {
@@ -221,4 +257,28 @@ public class ProjectDetails extends JDialog {
             e.printStackTrace();
         }
     }
+
+    private String loadBuildingManagements() {
+        String query = "SELECT bm.name AS management_name, s.name AS site_name, e.name AS leader_name " +
+                "FROM building_management bm " +
+                "JOIN site s ON bm.id = s.management_id " +
+                "JOIN brigade b ON s.id = b.site_id " +
+                "JOIN employee e ON b.leader_id = e.id " +
+                "WHERE e.position = 'Керівник'";
+        StringBuilder result = new StringBuilder("Будівельні керування та їх керівники:\n");
+        try (Connection connection = Main.getConnection();
+             PreparedStatement statement = connection.prepareStatement(query)) {
+            ResultSet resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                result.append("Керування: ").append(resultSet.getString("management_name")).append("\n")
+                        .append("Ділянка: ").append(resultSet.getString("site_name")).append("\n")
+                        .append("Керівник: ").append(resultSet.getString("leader_name")).append("\n\n");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return result.toString();
+    }
+
+
 }

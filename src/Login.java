@@ -38,10 +38,15 @@ public class Login extends JDialog {
                 String loginUser = loginField.getText();
                 String passwordUser = passwordField.getText();
                 User user = checkLogin(loginUser, passwordUser);
-                if (user != null) {
+                if (user != null && "owner".equals(user.getPossition())) {
                     JOptionPane.showMessageDialog(Login.this, "Вхід успішний!");
                     new ProjectDetails();
                     dispose();
+                } else if (user != null && "meneger".equals(user.getPossition())) {
+                    JOptionPane.showMessageDialog(Login.this, "Вхід успішний!");
+                    new ManageData();
+                    dispose();
+                    
                 } else {
                     JOptionPane.showMessageDialog(Login.this, "Помилка входу!");
                 }
